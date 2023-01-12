@@ -1,0 +1,72 @@
+clc
+clear all
+%Line From To Impedance
+Busdata = [ 1    1   2   0.5i;
+            2    1   4   0.3i;
+            3    2   4   0.6i;
+            4    2   3   0.2i;
+            5    3   4   0.1i];
+P=[1;1;-1;-1];  % Power delivered by Buses 1 to 4
+Pm=1.5;         % Maximum Allowable Power flow in all lines
+i=2;            % From Bus
+j=4;            % To Bus
+line = length(Busdata(:,1));
+bus= max(max(Busdata(:,2)),max(Busdata(:,3)));
+y = zeros(bus);
+for k = 1: line
+    g = Busdata(k,2);
+    h = Busdata(k,3);
+    y(g,g) = y(g,g) + (1/Busdata(k,4));
+    y(h,h) = y(h,h) + (1/Busdata(k,4));
+    y(g,h) = -(1/Busdata(k,4));
+    y(h,g) = y(g,h);
+end
+Y=y;
+y
+Y(1,:)=[];
+Y(:,1)=[];
+B=Y;
+x=abs(inv(B));
+a=zeros(3,3);
+b=[a(1,:);x];
+c=zeros(4,4);
+X=[c(:,1) b];
+X
+% Calculation of PTDF
+PTDF=zeros();
+for n=1:line
+    l=Busdata(n,2);
+    m=Busdata(n,3);
+    Z=abs(Busdata(n,4));
+        PTDF(l,m)=((X(l,i)-X(m,i))-(X(l,j)-X(m,j)))/Z;
+end
+% Calculation of Base Case Flows
+P(1)=[];
+t=x*P;
+t=[0;t]
+Pb=zeros();
+for n=1:line
+     l=Busdata(n,2);
+     m=Busdata(n,3);
+     Z=abs(Busdata(n,4));
+     Pb(l,m)=(t(l)-t(m))/Z;
+end
+% Calculation of Max Power
+Pmax=zeros();
+for n=1:line
+     l=Busdata(n,2);
+     m=Busdata(n,3);
+     Pmax(l,m)=(abs(Pm-Pb(l,m)))/abs(PTDF(l,m));
+end
+% Calculation of ATC
+Atc=zeros();
+i=1;
+for l=1:(bus-1)
+  for  m=1:bus
+    if Pmax(l,m)>0
+        Atc(i)=Pmax(l,m);
+        i=i+1;
+    end
+  end
+end
+Atc=min(Atc)
